@@ -1,0 +1,281 @@
+---
+title: "STOR 455 Assignment 8"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r}
+library(readr)
+library(mosaic)
+library(dplyr)
+
+source('~/Documents/(2) Sophomore Year/Second Semester (SPR 20)/STOR 455/R Scripts/HistNormal.R')
+```
+
+```{r}
+UsedCars <- read_csv("~/Documents/(2) Sophomore Year/Second Semester (SPR 20)/STOR 455/CSV Files/UsedCars.csv")
+```
+
+## PREPARATION
+
+```{r}
+Cars = as.data.frame(table(UsedCars$Model))
+names(Cars)[1] = "Model"
+names(Cars)[2] = "Count"
+FindModel = subset(Cars, Count>=1000)
+```
+
+```{r}
+set.seed(12121)
+
+#AMERICAN
+
+FordFusion = sample_n(subset(UsedCars, Model=="FusionSE"), 100)
+FordFusion$Country = "US"
+FordFusion$Type = "Car"
+FordExpeditionSUV = sample_n(subset(UsedCars, Model=="Expedition"), 100)
+FordExpeditionSUV$Country = "US"
+FordExpeditionSUV$Type = "SUV"
+
+#JAPANESE
+
+HondaAccord = sample_n(subset(UsedCars, Model=="Accord"), 100)
+HondaAccord$Country = "Germany"
+HondaAccord$Type = "Car"
+HondaPilotSUV = sample_n(subset(UsedCars, Model=="Pilot4WD"), 100)
+HondaPilotSUV$Country = "Germany"
+HondaPilotSUV$Type = "SUV"
+
+#GERMAN
+
+MercedesSUV = sample_n(subset(UsedCars, Model=="GLK-ClassGLK350"), 100)
+MercedesSUV$Country = "Japan"
+MercedesSUV$Type = "SUV"
+MercedesCLA = sample_n(subset(UsedCars, Model=="CLA-ClassCLA250"), 100)
+MercedesCLA$Country = "Japan"
+MercedesCLA$Type = "Car"
+
+CarsSix = rbind(FordFusion, FordExpeditionSUV, HondaAccord, HondaPilotSUV, MercedesCLA, MercedesSUV)
+```
+
+
+## ONE WAY ANOVA
+
+### QUESTION 1
+
+```{r}
+boxplot(Price~Model, data=CarsSix, las=2)
+means = tapply(CarsSix$Price,CarsSix$Model,mean)
+points(means,col="red",pch=4)
+```
+
+It is interesting to note the spreads of the different models. The SUV's tend to have a much greater distribution ("Expedition", "Pilot4WD", and "GLK-ClassGLK350") and higher means in general. The "Accord" has a similar spread to the SUV's, but a mean concurrent with normal cars. It is also interesting that the median price and mean price are very similar in every case.
+
+
+### QUESTION 2
+
+```{r}
+tapply(CarsSix$Price,CarsSix$Model,mean) 
+```
+
+```{r}
+round(tapply(CarsSix$Price,CarsSix$Model,sd),2)
+```
+
+```{r}
+mean(CarsSix$Price)
+sd(CarsSix$Price)
+```
+
+
+### QUESTION 3
+
+Based on the boxplots and summary statistics, there appears to be significant difference in the mean prices. The means range from 14522.34 up to 30383.36, which is logical considering we are comparing normal cars to SUV's which tend to be more expensive.
+
+Also, when looking at the standard deviations of the prices, we can see they vary from 2494.01 up to 10910.11, making the condition of *constant variance* less likely to be satisfied in the ANOVA for means model. 
+
+
+### QUESTION 4
+
+```{r}
+amodPrice=aov(Price~factor(Model),data=CarsSix)
+summary(amodPrice)
+```
+
+*Null Hypothesis*: The mean price of all car models are the same
+
+*Alternate Hyothesis*: At least one of the car models has a different mean price
+
+From the *aov* test, a *p-value of <2e-16* implies that we can reject the null hypothesis and conclude that there is a significant difference between the mean prices of the car models.
+
+
+### QUESTION 5
+
+```{r}
+plot(amodPrice)
+```
+
+Based on the "Residuals vs Fitted" plot, we can see the values vary uniformally around 0. This would imply *equality of variances*, however, the standard deviations of the car models vary greatly, making the condition of constant variance less likely to be satisfied. 
+
+Based on the "Normal Q-Q" plot, we can see that the data points follow the line relatively well, with some deviation at the ends. Thus, we can safely assume the model satisfies *normality of the residuals*.
+
+
+### QUESTION 6
+
+```{r}
+TukeyHSD(amodPrice)
+```
+
+```{r message=FALSE}
+origpar=par()          #saves current graphic parameters 
+par(mar=c(4,7,3,1))    #adjusts margins for wider labels 
+hsd=TukeyHSD(amodPrice)     #save the Tukey  intervals 
+plot(hsd,las=2)        #plot the intervals
+```
+
+Based on the *Turkey HSD methods*, we can see that there are multiple instance where the confidence interval does not cross the mean 0. This implies that there is a significant difference in mean prices, keeping with our previous assesment.
+
+
+## TWO WAY ANOVA
+
+### QUESTION 7
+
+```{r}
+amodCountryType=aov(Price~Country+Type,data=CarsSix)
+summary(amodCountryType)
+```
+
+*Null Hypothesis (A)*: The mean price of all cars based on country will be the same
+
+*Alternate Hypothesis (A)*: At least one the cars has a different mean price based on country
+
+*Null Hypothesis (B)*: The mean price of all cars based on type will be the same
+
+*Alternate Hypothesis (B)*: At least one the cars has a different mean price based on type
+
+Based on the above ANOVA test with *p-values 9.07e-13 and < 2e-16*, we can reject the null hypotheses and conclude that there is a significant difference in a car's mean price based on country and type.
+
+```{r}
+TukeyHSD(amodCountryType)
+
+origpar=par()          #saves current graphic parameters 
+par(mar=c(4,7,3,1))    #adjusts margins for wider labels 
+hsd=TukeyHSD(amodCountryType)     #save the Tukey  intervals 
+plot(hsd,las=2)        #plot the intervals
+```
+
+Keeping with the above conclusion, the *Turkey HSD methods* show that none of the intervals cross the mean 0, implying that there is a significant difference in mean price based on country and type.
+
+
+## QUESTION 8
+
+```{r}
+plot(amodCountryType)
+summary(amodCountryType)
+```
+
+Based on the "Q-Q Normal" plot, the data points seem to fit the line very well with little deviation at the ends, implying that the model satisfies *normality of the residuals*.
+
+Based on the "Residuals vs Fitted" plot, the data points seem to have a pretty consistent spread about the mean in some instances, however, there are a couple blocks that would not have constant variance (block two and block 3). So, we can say with a reasonable doubt that the data would not satisfy *equality of variances*.
+
+
+## QUESTION 9
+
+```{r}
+amodCountryTypeInter=aov(Price~Country+Type+Country*Type,data=CarsSix)
+summary(amodCountryTypeInter)
+```
+
+*Null Hypothesis (A)*: The price of the cars is not affected by country
+
+*Alternate Hypothesis (A)*: At least one car's price is affected by country
+
+*Null Hypothesis (B)*: The price of the cars is not affected by type
+
+*Alternate Hypothesis (B)*: At least one car's price is affected by type
+
+*Null Hypothesis (C)*: The price of the cars is not affected by the interaction between country and type
+
+*Alternate Hypothesis (C)*:At least one car's price is affected by the interaction of country and price
+
+Based on the above ANOVA test with *p-values 2.38e-14, < 2e-16, and < 2e-16*, we can reject the null hypotheses and conclude that a car's price is affected by country, type, and the interaction of country and type.
+
+```{r}
+TukeyHSD(amodCountryTypeInter)
+
+origpar=par()          #saves current graphic parameters 
+par(mar=c(4,7,3,1))    #adjusts margins for wider labels 
+hsd=TukeyHSD(amodCountryTypeInter)     #save the Tukey  intervals 
+plot(hsd,las=2)        #plot the intervals
+```
+
+Keeping with the above conclusion, the *Turkey HSD methods* show that there are intervals that do not cross the mean 0, implying that the price of a car is affected by country, type, and the interaction of country and type.
+
+
+## QUESTION 10
+
+```{r}
+interaction.plot(CarsSix$Type,CarsSix$Country,CarsSix$Price)
+interaction.plot(CarsSix$Country,CarsSix$Type,CarsSix$Price)
+```
+
+In the first interaction plot, cars of US origin clearly have a different slope from Japan and German bred cars. Because our sample is realtively large for each, we can also show that Japanese and German cars have different slopes, although they are somewhat similar.
+
+In the second interaction plot, it is pretty obvious that SUV and Car present very different trends as country of origin shifts. 
+
+Thus, based on these differences in slopes across both models, we can support that the intraction between type and country of origin are significant in modeling the price of a car.
+
+
+## ADDITIONAL TOPICS
+
+### QUESTION 11
+
+```{r}
+MultiCarMod = lm(Price~Model, data=CarsSix)
+summary(MultiCarMod)
+```
+
+Each coefficent is based on the reference group ("Accord"). So, for example, if we wanted to see our average price change when switching from an Accord to a FusionSE, the price would decrease by -780.2 on average. The same principle applies for the other models whose prices would all increase on average compared to the reference.
+
+
+## QUESTION 12
+
+```{r}
+modMile = aov(Price~Mileage, data = CarsSix)
+
+plot(modMile$residuals~modMile$fitted.values)
+qqnorm(modMile$residuals)
+qqline(modMile$residuals)
+hist.normal(modMile$residuals)
+```
+
+```{r}
+lme1 = lm(Price ~ Mileage, data=FordFusion)
+lme2 = lm(Price ~ Mileage, data=FordExpeditionSUV)
+lme3 = lm(Price ~ Mileage, data=HondaAccord)
+lme4 = lm(Price ~ Mileage, data=HondaPilotSUV)
+lme5 = lm(Price ~ Mileage, data=MercedesCLA)
+lme6 = lm(Price ~ Mileage, data=MercedesSUV)
+
+plot(Price ~ Mileage, data=CarsSix)
+abline(lme1, col='yellow')
+abline(lme2, col='red')
+abline(lme3, col='blue')
+abline(lme4, col='green')
+abline(lme5, col='purple')
+abline(lme6, col='orange')
+```
+
+For each of the different models, a linear model was created to show how its price varies based on mileage. All slopes are relatively similar, which implies there is little to no interaction between price and mileage, It is interesting to note, though, that all SUV models have nearly identical slopes. This occurence can also be observed between the normal car models.
+
+Based on the above information, we can safely assume that variability due to extra mileage (or a car being older) does not significantly impact the price of the car between the different models of cars.
+
+```{r}
+modModelMile = aov(Price~factor(Model) + Mileage, data = CarsSix)
+anova(modModelMile)
+```
+
+Based on the anova test, we can see that a very low p-value for Model implies that it remains a significant predictor for price. By the same principle, we could also say that mileage is a significant predictor as well. However, based on the evidence presented above the anova test, we can conclude that mileage provides no significant variability when interacting with the car model. 
+
+

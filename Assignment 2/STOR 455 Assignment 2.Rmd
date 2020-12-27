@@ -1,0 +1,337 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+# Preparation
+
+```{r}
+library(readr)
+library(mosaic)
+library(Stat2Data)
+library(dplyr) 
+
+UsedCars <- read.csv("~/Documents/(2) Sophomore Year/Second Semester (SPR 20)/STOR 455/CSV Files/UsedCars.csv")
+```
+
+```{r}
+Cars = as.data.frame(table(UsedCars$Model))
+
+names(Cars)[1] = "Model"
+names(Cars)[2] = "Count"
+
+FindModel = subset(Cars, Count>=2500)
+FindModel
+```
+
+```{r}
+set.seed(1938575)
+MyCars = sample_n(subset(UsedCars, Model=="FusionSE"), 200)
+range(MyCars$Year)
+
+MyCars$Age = 2017 - MyCars$Year
+```
+
+
+# MODEL 1
+
+```{r}
+carMod =lm(Price~Age, data=MyCars)
+summary(carMod)
+```
+
+### 1.
+
+Least Squares Regression Line: Price = -1051.3(Age) + 16806.5 or y = -1051.3x + 16806.5
+
+The slope estimate being negative tells us that as Age increases (the car getting older), the Price decreases. Cars go through wear and tear, add mileage, etc., making the Price decrease over time expected. In this case, a car that lasts 16 years is essentially worthless.
+
+### 2.
+
+```{r}
+plot(Price~Age, data=MyCars)
+abline(carMod)
+```
+
+### 3.
+
+```{r}
+# PLOT 1 (Check for linearity, constant variance)
+plot(Price~Age, data=MyCars, main = "Plot 1")
+abline(carMod)
+
+# PLOT 2 (Check for zero mean)
+plot(carMod$residuals~carMod$fitted.values, main = "Plot 2")
+abline(0,0)
+
+# PLOT 3 (Check for independence, normal residuals)
+hist(carMod$residuals, main = "Plot 3")
+
+# PLOT 4 (Check for independence, normal residuals)
+qqnorm(carMod$residuals, main = "Plot 4")
+qqline(carMod$residuals) 
+
+# PLOT 5 (Check for normality)
+set.seed(439218)
+x = sort(rnorm(99,0,1))
+hist(x, main = "Plot 5")
+
+# PLOT 6 (Check for normality)
+y = c(1:99)
+normy = qnorm(y/100)
+plot(x~normy, main = "Plot 6")
+abline(0,1)
+```
+
+Plot 1 allows us to quickly check for normality and constance variance. Price appears to vary linearly with Age and there is no clear "fanning" pattern, so we can assume the model has linearity and constance variance. You could argue some "fanning" at the head, but this is mainly due to a greater amount of data points, since cars tend to die out after a certain point (by this plot, at around 5 years)
+
+Plot 2 helps us check for a zero mean with respect to the residuals. At a glance, the residuals do not appear to explicitly vary around a line other than 0, so we can also assume a zero mean.
+  
+Plots 3 and 4 allow us to investigate independence, or whether the residuals appear normal. Plot 3 appears to drop off towards the right and seems to have a right skew, and Plot 4 curves off at the right extremity about the qq line. However, the residuals seem to follow normal distribution reasonably well and there isnt a single CLEAR outlier or skew, so we can say (within a reasonable doubt) that the model shows independence.
+
+Plots 5 and 6 check for normality. Taking a random sample of 99 values from a normal distribution, we can see through Plot 5 that the sample exhibits fairly clear normality, and Plot 6 also displays pretty clear normality with its values fitted realtively closely about the line, with some curviture towards the extremities. Thus, we can say the model is normal.
+
+So, with the exception of some doubt and with extra explanation about what happens towards the end of a cars lifetime (right extremity), the model meets the conditions for a simple linear model.
+
+
+### 4.
+
+```{r}
+max(carMod$residuals) # 7488.482
+min(carMod$residuals) # -4867.239
+
+which.max(carMod$residuals) # 104
+MyCars[104,] # this car has the largest absolute residual
+```
+
+```{r}
+rstandard(carMod)[104]
+rstudent(carMod)[104]
+```
+
+Both the standard residual (3.639982) and studentized residual (3.758716) are above 3, so we can justifiably assume that this value is influential.
+
+### 5.
+
+```{r}
+4/200
+6/200
+
+hatvalues(carMod) #carMod[104] = 0.013876151
+```
+
+The leverage for carMod[104] is 0.013876151, which is less than 4/200 and 6/200, implying that it is unlikely that has the potential to be influential on the model as a whole.
+
+### 6.
+
+```{r}
+summary(carMod) # d.f. = 198
+qt(0.90, 198) # C.I. for slope = 1.285842
+confint(carMod, level = 0.90)
+```
+
+The 90% confidence interval for the slope is the estimated coefficient (-1051.3) with standard error (92.5) * (~1.6 because of confidence interval), giving us the interval from -1204.148 to -898.4078. This implies that we can say (with 90% certainty) that a car will depreciate in value by anywhere between -1204.148 and -898.4078 each year.
+
+
+### 7.
+
+```{r}
+summary(carMod)
+```
+
+Null Hypothesis: there is no relationship between a car's age and price (Beta = 0)
+
+Alternate Hypothesis: there is some relationship between a car's age and price (Beta /= 0)
+
+In testing for slope, statistically significant evidence ( p-value < 2e-16) suggests that there is a relationship between the age of car and its price (so, we reject the null hypothesis)
+
+```{r}
+cor(MyCars$Price, MyCars$Age) 
+cor.test(MyCars$Price, MyCars$Age)
+```
+
+Null Hypothesis: there is no correlation between a car's price and age (correlation = 0)
+
+Alternate Hypothesis: there is some correlation between a car's price and age (correlation /= 0)
+
+In testing for correlation, there is a correlation of -0.6283198, suggesting a relatively strong relationship between a car's age and its price (so, we reject the null hypothesis).
+
+```{r}
+anova(carMod)
+
+# SSTotal = SSModel + SSE : SSTotal = 1404151000
+# r^2 = SSModel/SSTotal = 0.39478579
+```
+
+Null Hypothesis: there is a statistical difference between a car's age and price (Beta = 0)
+
+Alternate Hypothesis: there is no statistical difference between a car's age and price (Beta /= 0)
+
+Based on the ANOVA test for regression, we conclude that the r^2 value equals 0.39478579, implying that a relatively low proportion of the total variability is actually explained by the model.
+
+### 8.
+
+```{r}
+newx=data.frame(Age=3)
+head(newx)
+
+predict.lm(carMod, newx, interval="confidence", level=0.9)
+predict.lm(carMod, newx, interval="prediction", level=0.9)
+```
+
+By determining a 90% confidence interval mean price for a 3 year old Ford Fusion SE, we can see that a car of this type has depreciated to a value of 13652.68 (on average), thus we can say with 90% confidence that the car will be priced between 13374.98 and 13930.39 at this point. This means that we are fairly confident that the "true" slope lies somewhere within the interval. 
+
+By determining a 90% prediction interval for the price of an individual car at this age, we can see that most 3 year old Ford Fusion SE's will be priced at 13652.68, with an interval between 10217.76 and 17087.6 for a 90% confidence interval.
+
+### 9.
+
+-1051.3x + 16806.5 = 0
+1051.3x = 16806.5
+x = 15.986
+
+Thus, a Ford Fusion SE that is about 16 years old (~15.9) would be "free." Because our model predicts that a car would be free given enough time, this makes the model inappropriate for older cars, as seen by previous plots where the rightmost extremity showed some divergence. It is not plausible to say that a car becomes free at a certain point, so the model lacks that intuition.
+
+### 10. 
+
+```{r}
+transformMod = lm(sqrt(Price)~Age, data=MyCars)
+plot(sqrt(Price)~Age, data=MyCars)
+abline(transformMod)
+plot(transformMod)
+```
+
+```{r}
+transformMod2 = lm((Price^2)~Age, data=MyCars)
+plot((Price^2)~Age, data=MyCars)
+abline(transformMod2)
+plot(transformMod2)
+```
+
+I have completed two different tranformations above. 
+
+Square rooting the price greatly improves the divergence at the right extremity (qq norm plot), improving the models independence. However, it greatly sacrifices variance around the mean, meaning zero mean is not met anymore. 
+
+Squaring the function has an opposite effect. Its plot of residuals versus fitted values has a tighter fit about a zero mean than the original model, but it sacrifices its rightmost extremities becoming even more extreme, making the model no longer support independence.
+
+Overall, the original model was more consitant and had less variance and extreme values than either of the transformations. The original model had apparently normal residuals, close to a zero mean, and independence, with its only problems involving very old cars. So, i would say the transformations did not improve satisfying the linear model conditions.
+
+
+# MODEL 2
+
+### 1.
+
+```{r}
+multiCarMod = lm(Price~Age+Mileage, data=MyCars)
+
+summary(multiCarMod)
+anova(multiCarMod)
+```
+
+### 2.
+
+```{r}
+max(multiCarMod$residuals) # 6916.896
+min(multiCarMod$residuals) # -5903.387
+
+which.max(multiCarMod$residuals)
+MyCars[104,]
+```
+
+Largest Residual = 6916.896
+
+### 3.
+
+```{r}
+cor.test(MyCars$Price, MyCars$Age)
+cor.test(MyCars$Price, MyCars$Mileage)
+cor.test(MyCars$Age, MyCars$Mileage)
+
+cor(MyCars[c(2,4,10)])
+```
+
+Null Hypoethesis: There is no correlation between Age, Mileage, and Price (Age and Mileage are not important indicators of Price)
+
+Alternate Hypethesis: Age and Mileage can be used to sufficiently predict the Price of a car (Age and Mileage are important indicators of Price)
+
+Based on the correlations tests, each combination of factors results in a correlation above 0.56, with the highest correlation coming from Price and Age (~ -0.74), allowing us to conclude that the predictors (Age and Mileage) are important in predicting the Price of a car.
+
+### 4.
+
+```{r}
+anova455=function(model){
+  numpred=model$rank-1
+  dferror=df.residual(model)
+  dfmodel=numpred
+  dftotal=dfmodel+dferror
+  sse=sum(model$residual^2)
+  ssmodel=sum(model$effects[2:(numpred+1)]^2)
+  sstotal=ssmodel+sse
+  msmodel=ssmodel/dfmodel
+  mse=sse/dferror
+  fstat=msmodel/mse
+  pvalue=1-pf(fstat,dfmodel,dferror)
+  df=c(dfmodel,dferror,dftotal)
+  ss=c(ssmodel,sse,sstotal)
+  ms=c(msmodel,mse,0)
+  f=c(fstat,0,0)
+  p=c(pvalue,0,0)
+  table=data.frame(df,ss,ms,f,p)
+  table[2,4:5]=NA
+  table[3,3:5]=NA
+
+  colnames(table)=c("Df","Sum Sq","Mean Sq","F value","P(>F)")
+  row.names(table)=c("Model","Error","Total")
+  class(table)=c("anova","data.frame")
+  structure(table,
+            heading=c("ANOVA Table",
+                      paste("Model:", 
+                            formula(model)[2],
+                            formula(model)[1],
+                            formula(model)[3],"\n")
+                            )
+                      )
+}
+```
+
+
+```{r}
+summary(multiCarMod)
+anova(multiCarMod)
+anova455(multiCarMod)
+```
+
+Null Hypoethesis: There is no correlation between Age, Mileage, and Price (Age and Mileage are not effective predictors)
+
+Alternate Hypethesis: Age and Mileage can be used to predict the Price of a car (Age and Mileage are effective predictors)
+
+The anova455 test gives a p-value of < 2.2e-16 for the model, implying that there is a relationship. The anova455 test also gives an f-value of 157.07, which is more variation than we would expect to see by chance. Age and mileage are shown to have respective p-values of 2.21e-08 and 2e-16. If we compare those to a normal benchmark (0.05), we can see both p-values are below 0.05, suggesting that there is a correlation and we can reject the null hypothesis.
+
+### 5.
+
+```{r}
+summary(multiCarMod)$r.squared
+VIF = 1/(1-summary(multiCarMod)$r.squared)
+VIF
+```
+
+The VIF for this instance of multicollinearity is 2.594662, suggesting that there is moderate inflation of variance when the two are taken in conjunction. A VIF of 2.594662 means the variance of the model is increased by approximately 160% due to multicollinearity. Because the VIF isn't above 5 (or some other higher value), we can still reasonably consider the model to be reliable.
+
+### 6.
+
+```{r}
+newx=data.frame(Age=3, Mileage = 31000)
+head(newx)
+
+predict.lm(multiCarMod, newx, interval="confidence", level=0.9)
+predict.lm(multiCarMod, newx, interval="prediction", level=0.9)
+```
+
+By determining a 90% confidence interval mean price for a 3 year old, 31K mile Ford Fusion SE, we can see that a car of this type has depreciated to a value of 14789.55 (on average) and that we can say with 90% confidence that the car will be priced between 14505.33 and 15073.77 at this point. Thus, we can assume that the "true" slope is somewhere within the interval, and the average 3 year old Ford Fusion SE will fall there. 
+
+By determining a 90% prediction interval for the price of an individual car at this age, we can see that most 3 year old Ford Fusion SE's with 31K miles will be priced at 13652.68, with an interval between 12035.75 and 17543.36 for a 90% confidence interval. This interval denotes that most of these cars will be priced within the interval when they hit 3 years of age.
+
+
+
+

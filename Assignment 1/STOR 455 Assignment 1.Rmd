@@ -1,0 +1,196 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r message=FALSE, warning=FALSE}
+library(Stat2Data) 
+data("HighPeaks")
+```
+
+---------- BEGIN HIGH PEAKS SECTION ------------
+
+```{r}
+# (PART A, PART B)
+
+# Part B
+plot(Time~Ascent, data=HighPeaks)
+mod1=lm(Time~Ascent, data=HighPeaks)
+abline(mod1)
+
+#Part A
+summary(mod1) # Find equation for least squares line
+```
+
+(PART A) 
+  Least Squares Regression Line: 4.2100541 + 0.0020805x
+  
+(PART B)
+  See scatterplot with least squares line above
+
+```{r}
+# (PART C, PART D)
+
+plot(mod1$residuals~mod1$fitted.values)
+abline(0,0)
+
+
+
+HighPeaks[46,] #Couchsachraga Peak (need to do name without space)
+
+max(mod1$residuals) # Largest (pos.) resdual = 6.528913
+which.max(mod1$residuals) # Largest (pos.) residual found at HighPeaks[40]
+HighPeaks[40,] # Finds peak with residual 6.528913
+
+min(mod1$residuals) # Largest (neg.) resdual = -4.327472
+which.min(mod1$residuals) # Largest (neg.) residual found at HighPeaks[38]
+HighPeaks[38,] # Finds peak with residual -4.327472
+```
+
+(PART C) 
+  Prediction for Couchsachraga Peak: 4.2100541 + 0.002085(3140) = 10.7569541 Hours
+  Residual: (Observed - Predicted) 12 - 10.7569541 = 1.2430459 
+  
+(PART D)
+  Mountain with largest positive residual: Mt. Emmons
+  Value of largest positive residual: 6.528913
+  
+(PART E)
+  Mountain with largest negative residual: Porter Mtn.
+  Value of largest negative residual: -4.327472
+  
+```{r}
+# (PART E)
+
+# PLOT 1 (Check for linearity, constant variance)
+plot(Time~Ascent, data=HighPeaks)
+abline(mod1)
+
+# PLOT 2 (Check for zero mean)
+plot(mod1$residuals~mod1$fitted.values)
+abline(0,0)
+
+# PLOT 3 (Check for independence, normal residuals)
+hist(mod1$residuals)
+
+# PLOT 4 (Check for independence, normal residuals)
+qqnorm(mod1$residuals)
+qqline(mod1$residuals) 
+
+# PLOT 5 (Check for normality)
+set.seed(439218)
+x = sort(rnorm(99,0,1))
+hist(x)
+
+# PLOT 6 (Check for normality)
+y = c(1:99)
+normy = qnorm(y/100)
+plot(x~normy)
+abline(0,1)
+```
+
+(PART E)
+
+Plot 1 (plot with fitted line) allows us to quickly check for normality and constance variance. Time appears to vary linearly with ascent and there is no clear "fanning" pattern, so we can assume the model has linearity and constance variance.
+
+Plot 2 (plot with fitted line - residuals) helps us check for a zero mean with respect to the residuals. At a glance, the residuals do not appear to explicitly vary around a line other than 0, so we can also assume a zero mean.
+  
+Plots 3 and 4 allow us to investigate independence, or whether the residuals appear normal. The histogram (Plot 3) appears to skew right slightly, and the qq norm plot (Plot 4) seems to curve off slightly at the extremities about the qq line. However, the residuals seem to follow normal distribution reasonably well and there isnt a CLEAR outlier or skew, so we can say (within a reasonable doubt) that the model shows independence.
+
+Plots 5 and 6 check for normality. Taking a random sample of 99 values from a normal distribution, we can see through Plot 5 (histogram) that the sample exhibits fairly clear normality, and Plot 6 (plot with fitted line) also displays pretty clear normality with its values fitted realtively closely about the line. Thus, we can say the model is normal.
+
+So, with the exception of some doubt regarding the independence, the model meets the conditions for a simple linear model.
+
+----------- END HIGH PEAKS SECTION -------------
+
+```{r}
+data("Perch")
+```
+
+------------ BEGIN PERCH SECTION --------------
+
+```{r}
+# (PART A)
+
+# PLOT 1
+plot(Weight~Length, data=Perch)
+mod2=lm(Weight~Length, data=Perch)
+abline(mod2)
+
+# PLOT 2
+plot(mod2$residuals~mod2$fitted.values)
+abline(0,0)
+```
+
+(PART A)
+
+The plot with fitted line (Plot 1) exhibits a much greater slope if you were to only look at the first half of the data (Weight < 400) as opposed to the latter half. This disntinction and the amount of drop-off at the lower extremity suggests non-linearity.
+The plot with the residuals about a fitted line (Plot 2) clearly does not vary uniformally around the line. It resembles something that could be described as a "rainbow" pattern, again suggesting non-linearity.
+Thus, a transformation would be needed since both models clearly oppose linearity.
+
+
+```{r}
+# (PART B)
+
+mod3 = lm(log(Weight)~log(Length), data=Perch)
+summary(mod3)
+exp(-5.07884) #0.006227128
+
+plot(Weight~Length, data=Perch)
+curve(0.006227128*(x^3.16269), add=TRUE)
+```
+
+(PART B) CALCULATIONS
+
+log(Weight) =  -5.07884 + 3.16269*log(Length)
+Weight = e ^(-5.07884 + 3.16269(log(Length))
+Weight = e ^(-5.07884) e ^((3.16269)(log(Length))
+Weight = e ^(-5.07884) e ^(log(Lengtht ^ 3.16269))
+Weight = e ^(-5.07884) (Length ^ 3.16269)
+
+Weight = 0.006227128(Length ^ 3.16269)
+
+```{r}
+# (PART C)
+
+# PLOT 1 (Check for linearity, constant variance)
+plot(log(Weight)~log(Length), data=Perch)
+abline(mod3)
+
+# PLOT 2 (Check for zero mean)
+plot(mod3$residuals~mod3$fitted.values)
+abline(0,0)
+
+# PLOT 3 (Check for independence, normal residuals)
+hist(mod3$residuals)
+
+# PLOT 4 (Check for independence, normal residuals)
+qqnorm(mod3$residuals)
+qqline(mod3$residuals) 
+
+# PLOT 5 (Check for normality)
+set.seed(123218)
+x = sort(rnorm(99,0,1))
+hist(x)
+
+# PLOT 6 (Check for normality)
+y = c(1:99)
+normy = qnorm(y/100)
+plot(x~normy)
+abline(0,1)
+```
+
+(PART C)
+
+Plots 1 and 2 support linearity, constant variance, and zero mean since the data follows the fitted lines and there is no "fan-like" pattern. Plots 3 and 4 still show some clear outliers and large divergence at the lower extremity, showing that, although the transformation largely fixed other aspects of the model, independence and normality of the residuals remains a problem. However, Plots 5 and 6 support normality. So, the aformentioned problem of independence persists while the other problems were largely remedied through the transformation.
+
+(PART D)
+
+Weight = 0.006227128(Length ^ 3.16269)
+Weight = 0.006227128((19) ^ 3.16269) = 68.9586926 g
+~ about 69 grams
+
+---------------- END PERCH SECTION --------------
+

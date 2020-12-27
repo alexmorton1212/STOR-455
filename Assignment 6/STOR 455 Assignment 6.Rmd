@@ -1,0 +1,210 @@
+---
+title: "STOR 455 Assignment 6"
+output:
+  html_document:
+    df_print: paged
+---
+
+# Data Preparation
+
+```{r}
+library(Stat2Data)
+library(bestglm)
+
+StudentPerformance <- read.csv("~/Documents/(2) Sophomore Year/Second Semester (SPR 20)/STOR 455/CSV Files/studentPerformance.csv")
+```
+
+```{r}
+head(StudentPerformance)
+```
+
+Data was originally a csv file, so no extra manipulation was needed.
+
+> Source: https://www.kaggle.com/aljarah/xAPI-Edu-Data/data
+
+> Summary: This is an educational dataset that describes a group of 480 students in an attempt to learn more about the learning experience.
+
+> Variables:
+
+* Gender, Nationality, Place of Birth, Grade Levels (1-12)
+
+* Educational Stages = educational level student belongs (middle school, high school, etc.)
+
+* Section ID = classroom student belongs (students split into rooms A, B, or C)
+
+* Topic = course (Egnlish, Math, etc.)
+
+* Semester = school year semester (First or Second)
+
+* Parent Responsible for Student = (mother or father; which parent takes main responsibility for answering the surveys/rating satisfaction)
+
+* Raised Hand = how many times the student raises his/her hand (0-100)
+
+* Visited Resources = how many times the student visits course content (0-100)
+
+* Viewing Announcements = how many times the student checks the announcements (0-100)
+
+* Discussion Groups = how many times the student participated in group discussion (0-100)
+
+* Parent Answering Survey- whether the parent answers the survey provided by the school (Yes or No)
+
+* Parent School Satisfaction = parent satisfaction with school (Yes or No)
+
+* Student Absence Days = the number of absence days for each student (above-7 or under-7)
+
+
+# Single Predictor
+
+### Part (a)
+
+```{r}
+StudentPerformance$StudentAbsenceDays <- ifelse(StudentPerformance$StudentAbsenceDays=="Above-7", 1, 0)
+```
+
+"Above-7" absence days coded as "1"
+
+"Below-7" absence days coded as "0"
+
+```{r}
+logitmod1 = glm(StudentAbsenceDays~Discussion, family=binomial, data=StudentPerformance)
+```
+
+
+### Part (b)
+
+```{r}
+B0 = summary(logitmod1)$coef[1]
+B1 = summary(logitmod1)$coef[2]
+
+plot(jitter(StudentPerformance$StudentAbsenceDays,amount=0.1)~Discussion,data=StudentPerformance)
+curve(exp(B0+B1*x)/(1+exp(B0+B1*x)),add=TRUE, col="red")
+```
+
+
+### Part (c)
+
+```{r}
+for(j in 10:16){emplogitplot1(StudentAbsenceDays~Discussion, data=StudentPerformance, ngroups=j, main=j)}
+```
+
+Multiple empirical logit plots were taken to give a better idea of linearity. 
+
+Based on the above empirical logit plots, the data seems to be somewhat linear. There seems to be a single outlier in every variation of the plot, so taking that into account, we can comment further on the linearity. While the data points may not be fitted tightly about the regression line in every instance, they do follow the line realtively well and there doesn't seem to be any distinct curvature in the points. Thus, we can say within reasonable doubt that the 'StudentAbsenceDays' varies linearly with respect to 'Discussion' participation.
+
+
+### Part (d)
+
+```{r}
+summary(logitmod1)
+```
+
+Null Hypothesis: there is no relationship between a student's participation in discussions and their attendance (Beta = 0)
+
+Alternate Hypothesis: there is some relationship between a student's participation in discussions and their attendance (Beta /= 0)
+
+With a p-value of 2.47e-06 (which is less than an arbitrarily chosen 0.05), we can reject the null hypothesis and conclude that there is some relationship between a student's participation in discussions and their attendance.
+
+
+### Part (e)
+
+```{r}
+SE_B1 = summary(logitmod1)$coef[2,2]
+exp(B1 - SE_B1*qnorm(0.975))
+exp(B1 + SE_B1*qnorm(0.975))
+
+exp(confint.default(logitmod1))
+```
+
+The confidence interval for the odds ratio (0.9761661, 0.9901022) shows that for every extra time a student participates in a discussion, they become less likely to have more than 7 absences. Both values are less than 1, meaning the odds of having more than 7 absences decreases as discussion participation increases (albeit by a very small amount). It is worth mentioning that the values being so close to 1 makes sense considering the values for 'Discussion' range from (1,99).
+
+### Part (f)
+
+```{r}
+summary(logitmod1)
+```
+
+Null Hypothesis: the model is not more effective with the added predictor 'Discussion' (Beta = 0)
+
+Alternate Hypothesis: the model is more effective with the added predictor 'Discussion' (Beta /= 0)
+
+```{r}
+645.27 - 621.65
+1-pchisq(23.62,1)
+```
+
+G = 645.27 - 621.65 = 23.62
+
+p-value = 1.173614e-06
+
+Based on the p-value above (arbitrarily < 0.05), we can reject the null hypothesis and conclude that the model is more effective with the added predictor 'Discussion'
+
+
+### Part (g): Repeated steps using 'raisedhands' as the predictor
+
+```{r}
+logitmod2 = glm(StudentAbsenceDays~raisedhands, family=binomial, data=StudentPerformance)
+```
+
+```{r}
+B0 = summary(logitmod2)$coef[1]
+B1 = summary(logitmod2)$coef[2]
+
+plot(jitter(StudentPerformance$StudentAbsenceDays,amount=0.1)~raisedhands,data=StudentPerformance)
+curve(exp(B0+B1*x)/(1+exp(B0+B1*x)),add=TRUE, col="red")
+```
+
+```{r}
+for(j in 10:16){emplogitplot1(StudentAbsenceDays~raisedhands, data=StudentPerformance, ngroups=j, main=j)}
+```
+
+Multiple empirical logit plots were taken to give a better idea of linearity. 
+
+Based on the above empirical logit plots, the data seems to be linear. The data points are fitted tightly about the regression line in every instance and there doesn't seem to be any distinct curvature in the points. Thus, we can say within reasonable doubt that the 'StudentAbsenceDays' varies linearly with respect to 'raisedhands'.
+
+```{r}
+summary(logitmod2)
+```
+
+Null Hypothesis: there is no relationship between a student raising their hand more and their attendance (Beta = 0)
+
+Alternate Hypothesis: there is some relationship between a student raising their hand more and their attendance (Beta /= 0)
+
+With a p-value of 2.47e-06 (which is less than an arbitrarily chosen 0.05), we can reject the null hypothesis and conclude that there is some relationship between a student raising their hand more and their attendance.
+
+```{r}
+SE_B1 = summary(logitmod2)$coef[2,2]
+exp(B1 - SE_B1*qnorm(0.975))
+exp(B1 + SE_B1*qnorm(0.975))
+
+exp(confint.default(logitmod2))
+```
+
+The confidence interval for the odds ratio (0.9581694, 0.9723086) shows that for every extra time a student raises their hand, they become less likely to have more than 7 absences. Both values are less than 1, meaning the odds of having more than 7 absences decreases as 'raisedhands' increases.
+
+```{r}
+summary(logitmod2)
+```
+
+Null Hypothesis: the model is not more effective with the added predictor 'raisedhands' (Beta = 0)
+
+Alternate Hypothesis: the model is more effective with the added predictor 'raisedhands' (Beta /= 0)
+
+```{r}
+645.27 - 534.82
+1-pchisq(110.45,1)
+```
+
+G = 645.27 - 621.65 = 23.62
+
+p-value = 0
+
+Based on the p-value above (0), we can reject the null hypothesis and conclude that the model is more effective with the added predictor 'raisedhands'
+
+
+### part (h)
+
+At a glance, using 'raisedhands' as a predictor seemes to be the more effective method in predicting the attendance of a student compared to using 'Discussion'. Based on the empirical logit plots of both models, the 'raisedhands' predictor shows greater linearity. Additionally, when looking at the G test statistic of both, the model using 'raisedhands' has a p-value of 0, while the model using 'Discussion' has p-value slightly greater than 0. This is not to say 'Discussion' is not an effective predictor, but 'raisedhands' is better and produces the more effective model.
+
+
+
+

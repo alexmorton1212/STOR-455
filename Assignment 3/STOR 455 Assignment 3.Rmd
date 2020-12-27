@@ -1,0 +1,125 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r}
+library(readr)
+library(leaps)
+library(car)
+library(mosaic)
+
+AmesTrain17 <- read.csv("~/Documents/(2) Sophomore Year/Second Semester (SPR 20)/STOR 455/AmesTrain17.csv")
+
+AmesTrainNum = select(AmesTrain17, -Order, -LotConfig, -HouseStyle, -ExteriorQ, -ExteriorC, -Foundation, -BasementHt, -BasementC, -BasementFin, -HeatingQC, -CentralAir, -KitchenQ, -GarageType, -GarageQ, -GarageC)
+```
+
+```{r}
+ShowSubsets=function(regout){
+  z=summary(regout)
+  q=as.data.frame(z$outmat)
+  q$Rsq=round(z$rsq*100,2)
+  q$adjRsq=round(z$adjr2*100,2)
+  q$Cp=round(z$cp,2)
+  return(q)
+}
+```
+
+
+```{r}
+bestsubsets = regsubsets(Price~., data = AmesTrainNum, nbest = 1, nvmax = 30)
+ShowSubsets(bestsubsets)
+```
+
+### PART 1
+
+```{r}
+Mod1 = lm(Price~LotFrontage+LotArea+Quality+Condition+YearBuilt+YearRemodel+BasementFinSF+BasementUnFinSF+FirstSF+SecondSF+Bedroom+TotalRooms+GarageCars+GarageSF+ScreenPorchSF, data=AmesTrainNum)
+
+summary(Mod1)
+vif(Mod1)
+```
+
+### PART 2
+
+```{r}
+plot(Mod1$residuals~Mod1$fitted.values)
+abline(0,0)
+```
+
+```{r}
+#residuals analysis
+
+#plot of residuals and fitted.values
+plot(Mod1$residuals~Mod1$fitted.values)
+abline(a=0,b=0)
+
+#Normality of residuals
+histogram(Mod1$residuals)
+
+qqnorm(Mod1$residuals)
+qqline(Mod1$residuals)
+
+#qqPlot
+plot(Mod1)
+qqPlot(Mod1$resid)
+```
+
+### PART 3
+
+```{r}
+plot(Price~LotFrontage+LotArea+I(Quality)^2+Condition+sqrt(YearBuilt)+YearRemodel+BasementFinSF+BasementUnFinSF, data=AmesTrainNum)
+plot(Price~FirstSF+SecondSF+Bedroom+log(TotalRooms)+GarageCars+GarageSF+ScreenPorchSF, data=AmesTrainNum)
+```
+
+
+```{r}
+tMod =lm(Price~LotFrontage+LotArea+I(Quality^2)+Condition+sqrt(YearBuilt)+YearRemodel+BasementFinSF+BasementUnFinSF+FirstSF+SecondSF+Bedroom+log(TotalRooms)+GarageCars+GarageSF+ScreenPorchSF, data=AmesTrainNum)
+
+plot(tMod$residuals~tMod$fitted.values)
+abline(0,0)
+
+mean(resid(Mod1))
+mean(resid(tMod))
+```
+
+```{r}
+#residuals analysis
+
+#plot of residuals and fitted.values
+plot(tMod$residuals~tMod$fitted.values)
+abline(a=0,b=0)
+
+#Normality of residuals
+histogram(tMod$residuals)
+
+qqnorm(tMod$residuals)
+qqline(tMod$residuals)
+
+#qqPlot
+plot(tMod)
+qqPlot(tMod$resid)
+```
+
+```{r}
+oMod =lm(Price~LotFrontage+LotArea+I(Quality^4)+Condition+YearBuilt+YearRemodel+BasementFinSF+BasementUnFinSF+sqrt(FirstSF)+SecondSF+Bedroom+sqrt(TotalRooms)+I(GarageCars^2)+I(GarageSF^2)+ScreenPorchSF, data=AmesTrainNum)
+
+plot(oMod$residuals~oMod$fitted.values)
+abline(a=0,b=0)
+
+#Normality of residuals
+histogram(oMod$residuals)
+
+qqnorm(oMod$residuals)
+qqline(oMod$residuals)
+
+#qqPlot
+plot(oMod)
+qqPlot(oMod$resid)
+
+mean(resid(oMod))
+```
+```
+

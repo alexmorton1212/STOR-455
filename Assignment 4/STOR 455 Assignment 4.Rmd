@@ -1,0 +1,226 @@
+
+```{r}
+library(dplyr)
+library(mosaic)
+library(readr)
+library(leaps)
+
+UsedCars <- read.csv("~/Documents/(2) Sophomore Year/Second Semester (SPR 20)/STOR 455/CSV Files/UsedCars.csv")
+```
+
+```{r}
+cars = subset(as.data.frame(table(UsedCars$Model)), Freq>2500)
+cars
+```
+
+```{r}
+set.seed(12121)
+
+FocusHatchback = sample_n(subset(UsedCars, Model=="FocusHatchback"), 200)
+FocusSE = sample_n(subset(UsedCars, Model=="FocusSE"), 200)
+FocusSedan = sample_n(subset(UsedCars, Model=="FocusSedan"), 200)
+
+Focus = rbind(FocusHatchback, FocusSE, FocusSedan)
+Focus$Age = 2017 - Focus$Year
+```
+
+
+# MODEL 3
+
+```{r}
+set.seed(1938575)
+Fusion = sample_n(subset(UsedCars, Model=="FusionSE"), 200)
+Fusion$Age = 2017 - Fusion$Year
+```
+
+### A.
+
+```{r}
+quadMod=lm(Price~Age+I(Age^2),data=Fusion)
+summary(quadMod)
+
+plot(Price~Age,main="Quadratic Model",data=Fusion)
+curve(16518.04-772.86*x+42.96*x^2,add=TRUE)
+```
+
+Prediction Equation: Price = 16518.04 - 772.86(Age) + 42.96(Age)^2
+
+### B.
+
+```{r}
+summary(quadMod)
+```
+
+Null Hypothesis: coefficients = 0, no terms of 'Age' relate to 'Price'
+Alternative Hypothesis: coefficients /= 0, at least of term of 'Age' relates to 'Price'
+
+The variable 'Age' has a p-value 0.000292. So, we can reject the null hypothesis and conclude that some term involving 'Age' is significant in predicting 'Age'.
+
+### C.
+
+```{r}
+threeYearCar = data.frame(Age = 3)
+predict.lm(quadMod, threeYearCar, interval = "prediction", level = .9)
+```
+
+Based on the prediction interval, most 3 year old Fusions would be contained within the price range [10383.44 , 17242.24] with 90% confidence.
+
+### D.
+
+```{r}
+16518.04-772.86*(8.995)+42.96*(8.995)^2
+```
+
+The quadratic model does not allow for some 'Age' where the 'Price' can be negative or zero.
+
+For (Age = x) and (Price = y)...
+
+y = 16518.04 - 772.86x + 42.96x^2
+(1st derivative): y' = 85.92x - 772.86
+(2nd derivative): y'' = 85.92
+
+Solving for y' = 0, we find x = 8.995
+
+Thus, because y'' > 0, we can say that the minimum 'Price' of the car occurs at 'Age' = 8.995, which is 'Price' = 13042.06
+
+Also, y can never equal 0, so there is no x-intercept ('Price' cannot be negative or 0).
+
+### E.
+
+Based on my answer in Part D, at 'Age' = 8.995, Fusions begin to increase in value. In most cases, this is very impractical. Cars tend to endure normal wear-and-tear and decreased functionality as they age, making them decrease in value. There are exceptions for vintage cars, where prices can skyrocket as they age. But, cars like Ford Fusions (the type of car used in the model), are not typically the kind of car that would eventually increase in value, especially not after approximately 9 years. Thus, this type of prediction can be seen as a flaw of the quadratic model.
+
+### F.
+
+```{r}
+cubicMod=lm(Price~Age+I(Age^2)+I(Age^3),data=Fusion)
+summary(cubicMod)
+```
+
+```{r}
+quarticMod=lm(Price~Age+I(Age^2)+I(Age^3)+I(Age^4),data=Fusion)
+summary(quarticMod)
+```
+
+```{r}
+anova(cubicMod, quadMod)
+anova(quarticMod, quadMod)
+```
+
+
+Looking at the Adjusted R-squared values, there is no real distinction between the fit of the quadratic, cubic, and quartic models. The quadratic techincally has the best fit, but the differences are so miniscule that there is no significant advantage in terms of fit.
+
+Adjusted R-Squared Values:
+
+0.3954 (quadratic), 
+0.3929 (cubic), 
+0.3952 (quartic)
+
+Also, looking at the anova tests does not show any significant improvements by introducing cubic or quartic terms.
+
+
+# MODEL 4
+
+### A.
+
+```{r}
+secondOrderMod = lm(Price~Age+Mileage+I(Age^2)+I(Mileage^2)+Age*Mileage,data=Fusion)
+plot(secondOrderMod$residuals~secondOrderMod$fitted.values, main = "Residual Plot (Second Order)")
+abline(0,0)
+```
+
+The residuals vary nicely around the mean, so we can say the model has zero mean. There is some fanning towards the upper limit of the model, which suggests some degree of non-linearity, but overall it tends to vary uniformally about the mean.
+
+### B.
+
+```{r}
+summary(secondOrderMod)
+anova(secondOrderMod)
+```
+
+Null Hypothesis: coefficients = 0 (Beta = 0), none of the terms relate to 'Price'
+Alternative Hypothesis: coefficients /= 0 (Beta /= 0), at least one of the terms relates to 'Price'
+
+With a p-value < 2.2e-16, we can reject the null hypothesis. So, we can conclude that some variation of the terms 'Age' or 'Mileage' are significant indicators of 'Price'.
+
+### C.
+
+```{r}
+secondOrderRed = lm(Price~Age+Mileage, data=Fusion)
+anova(secondOrderRed, secondOrderMod)
+```
+
+Null Hypothesis: coefficients = 0 (Beta = 0), none of the second order terms relate to 'Price'
+Alternative Hypothesis: coefficient /= 0 (Beta /= 0), at least one of the second order terms relates to 'Price'
+
+'Age^2' has p-value = 0.51488. 'Mileage^2' has p-value = 0.00132. 'Age * Mileage' has p-value = 0.35047.
+
+Since 'Mileage^2' has a p-value < 0.05, we can reject the null hypothesis. Also, based on the anova test (p-value of  0.001259), the second order terms seem to have some importance in predicting 'Price'.
+
+### D.
+
+```{r}
+secondOrderMil = lm(Price~Mileage+I(Mileage^2)+I(Mileage*Age), data=Fusion)
+anova(secondOrderMil, secondOrderMod)
+```
+
+Null Hypothesis: coefficients = 0 (Beta = 0), none of the terms involving 'Mileage' relate to 'Price'
+Alternative Hypothesis: coefficient /= 0 (Beta /= 0), at least one of the terms involving 'Mileage' relates to 'Price'
+
+'Mileage' has p-value = 1.09e-12. 'Mileage^2' has p-value = 0.00132. 'Age * Mileage' has p-value = 0.35047.
+
+Since 'Mileage' has a p-value < 0.05, we can reject the null hypothesis. However, based on the anova test (p-value of  0.4089), the extra terms involving 'Mileage' appear to be not very important in predicting 'Price'. 
+
+
+# MODEL 5
+
+### A.
+
+```{r}
+multiMod=lm(Price~Age+Mileage+Model,data=Focus)
+```
+
+### B.
+
+```{r}
+summary(multiMod)
+anova(multiMod)
+```
+
+Null Hypothesis: coefficients = 0 (Beta = 0), none of the 'Model' terms relate to 'Price'
+Alternative Hypothesis: coefficients /= 0 (Beta /= 0), at least one of the 'Model' terms relates to 'Price'
+
+According to the anova test, the p-value for the 'Model' term is 7.556e-13 (< 0.05).
+
+So, we can reject the null hypothesis and conclude that 'Model' does have some importance in predicting 'Price'.
+
+### C.
+
+```{r}
+multiMod2=lm(Price~Age+Mileage+Model+Age*Model+Mileage*Model, data=Focus)
+```
+
+### D.
+
+```{r}
+summary(multiMod2)
+anova(multiMod2)
+```
+
+Null Hypothesis: coefficient = 0 (Beta = 0), none of the 'Model' terms relate to 'Price'
+Alternative Hypothesis: at least one coefficient /= 0 (Beta /= 0), at least one of the 'Model' terms relates to 'Price'
+
+According to the anova test, the p-value for the 'Model' term is 8.659e-13. The p-value for the 'Age:Model' is 0.9965. The p-value for 'Mileage:Age' is 0.5654.
+
+Since the 'Model' term produces a p-value < 0.05, we can reject the null hypothesis. However, the interaction terms seem to be less significant in predicting 'Price'.
+
+### E.
+
+```{r}
+anova(multiMod, multiMod2)
+```
+
+For explanation, Model A = multiMod and Model B = multiMod2.
+
+Model A is nested within Model B, with Model B incorporating the interaction terms of 'Age * Model' and 'Mileage * Model'. Model B assumes that there is some added benefit of including the interactions between multiple factors. Model B also assumes that the 'Model' of the car has a great impact on predicting 'Price', which would only make a significant impact if the 'Model' is vintage/worth a lot of money. In this case, the 'Mileage' would not matter and the 'Age' might increase 'Price' based on the interaction terms. In most cases though, the interaction terms would not have very much impact since most models of car decrease in value as they age and gain mileage (eveidenced by the above test with p-value 0.8864). Model A assumes there is a relationship between 'Age', 'Mileage', and 'Model' in predicting 'Price'. Model A, in context, would not necessarily account for or be well equipped in predicting these cars that are worth more as they age (where 'Model' matters more).
+
+

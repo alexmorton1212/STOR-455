@@ -1,0 +1,93 @@
+---
+title: "Assignment #5"
+output:
+  html_document:
+    df_print: paged
+---
+
+### Set-Up
+
+```{r}
+library(readr)
+
+AmesTrain17 <- read.csv("~/Documents/(2) Sophomore Year/Second Semester (SPR 20)/STOR 455/Assignment 3/AmesTrain17.csv")
+AmesTest17 <- read.csv("/Users/alexmorton/Documents/(2) Sophomore Year/Second Semester (SPR 20)/STOR 455/CSV Files/AmesTest17.csv")
+```
+
+# PART 6
+
+```{r}
+mod1 = lm(Price~LotFrontage+LotArea+Quality+Condition+YearBuilt+YearRemodel+BasementFinSF+BasementUnFinSF+FirstSF+SecondSF+Bedroom+TotalRooms+GarageCars+GarageSF+ScreenPorchSF, data=AmesTrain17)
+
+summary(mod1)
+```
+
+### Predicted 'Price' for Each Holdout Case
+
+```{r}
+fitPrice = predict(mod1, newdata=AmesTest17)
+fitPrice
+```
+
+### Residuals for Each Holdout Case
+
+```{r}
+holdoutresid = AmesTest17$Price - fitPrice
+holdoutresid
+```
+
+### Mean and Standard Deviation of Holdout Residuals
+
+```{r}
+mean(holdoutresid)
+sd(holdoutresid)
+
+mean(mod1$residuals)
+sd(mod1$residuals)
+```
+
+Comparing the training and holdout residuals shows that the means vary by a decent amount (-4.499237e-16 and -3.654769), but the standard deviations remain relatively similar (28.56527 and 27.47029). So, the mean of the holdout residuals is not necessarily expected based on the training residuals.
+
+### Poorly Predicted Holdout Cases
+
+```{r}
+hist(holdoutresid)
+which(holdoutresid<=-150)
+holdoutresid[c(118)]
+```
+
+Row 118 of the holdout data has a residual of -176.5973, while others have residuals contained within [-100, 100], making it especially poorly predicted by the training model.
+
+### Cross-Validation Correlation
+
+```{r}
+crosscor = cor(AmesTest17$Price, fitPrice)
+
+crosscor
+crosscor^2
+0.8713 - crosscor^2
+```
+
+The shrinkage (0.029) is subjectively OK. The training model worked very similarly for the holdout sample as the original data it was created for.
+
+# PART 9
+
+```{r}
+AmesModFinal <- lm(log(Price)~LotArea+YearBuilt+FirstSF+SecondSF+GarageSF+ExteriorQ+ExteriorC+HeatingQC+CentralAir+BasementHt+I(FirstSF^2)+FirstSF:KitchenQ, data=AmesTrain17)
+summary(AmesModFinal)
+
+plot(AmesModFinal)
+
+mean(resid(AmesModFinal))
+```
+
+```{r}
+x = data.frame(LotFrontage=90, LotArea=11060, Quality=7, Condition=5, ExteriorQ="Gd", ExteriorC="Gd", Foundation="PConc", BasementUnFinSF=1150, BasementFBath=0, BasementHBath=0, Heating="GasA", HeatingQC="Ex", CentralAir="Y", BasementHt="Ex", KitchenQ="TA", FirstSF=1164, SecondSF=1150, Bedroom=3, FullBath=2, HalfBath=1, Fireplaces=1, GarageCars=2, GarageSF=502, GarageQ="TA", GarageC="TA", OpenPorchSF=274, TotalRooms=9, YearBuilt=1995, YearRemodel=2003, HouseStyle="2Story", BasementFin="Unf", BasementFinSF=0, ScreenPorchSF=0)
+
+predict.lm(AmesModFinal, x, interval="prediction", level=0.95)
+
+exp(5.291753)
+exp(5.890936)
+```
+
+I chose not to make any more adjustments to the model. The mean of our residuals is already very close to 0 and there are no apparent outliers, suggesting our data fits well. We are 95% confident that some particular house with the characteristics described in 'x' costs between 198,691.40 and 361,743.70 dollars.

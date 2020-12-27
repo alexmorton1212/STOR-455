@@ -1,0 +1,138 @@
+---
+title: "STOR 455 Assignment 7"
+output:
+  html_document:
+    df_print: paged
+---
+
+# Data Preparation
+
+```{r}
+library(Stat2Data)
+library(bestglm)
+
+StudentPerformance <- read.csv("~/Documents/(2) Sophomore Year/Second Semester (SPR 20)/STOR 455/CSV Files/studentPerformance.csv")
+```
+
+```{r}
+StudentPerformance$StudentAbsenceDays <- ifelse(StudentPerformance$StudentAbsenceDays=="Above-7", 1, 0)
+```
+
+# PART A
+
+```{r}
+MultiStudentMod = glm(StudentAbsenceDays~Discussion+raisedhands+factor(ParentschoolSatisfaction), data=StudentPerformance, family=binomial)
+```
+
+
+# PART B
+
+```{r}
+summary(MultiStudentMod)
+```
+
+Null Hypothesis: the model is not effective with the added predictors 'raisedhands', 'Discussion', and 'ParentschoolSatisfaction' (Beta = 0)
+
+Alternate Hypothesis: the model is effective with the added predictors 'raisedhands', 'Discussion', and 'ParentschoolSatisfaction' (Beta /= 0)
+
+```{r}
+645.27 - 526.51
+1-pchisq(118.76,3)
+```
+
+G = 645.27 - 526.51 = 118.76
+
+p-value = 0
+
+Based on the p-value above (0), we can reject the null hypothesis and conclude that the model is effective in predicting 'StudentAbsenceDays' with the predictors 'raisedhands', 'Discussion', and 'ParentschoolSatisfaction'
+
+
+# PART C
+
+```{r}
+summary(MultiStudentMod)
+```
+
+Null Hypothesis: 'XXXX' is not effective within the context of the model in predicting 'StudentAbsenceDays' (Beta = 0)
+
+Alternate Hypothesis: 'XXXX' is effective within the context of the model in predicting 'StudentAbsenceDays' (Beta /= 0)
+
+The same hypotheses can be used for each of the following predictors by substuting their names into the 'XXXX': 'raisedhands', 'Discussion', 'ParentschoolSatisfaction'
+
+Based on the p-values of 'ParentschoolSatisfaction' (0.0181) and 'raisedhands' (2.23e-15), we can reject the null hypotheses and conclude that the two are significant and effective indicators of how many absences a student will have within the model.
+
+The p-value of 'Discussion' (0.0780) indicates that while 'Discussion' may not necessarily be a bad predictor of 'StudentAbsenceDays', it is not significant in terms of an arbirtary benchmark for the p-values (<0.05). Thus, we can conclude that 'Discussion' in terms of this model, does not effectively or significantly contribute to prediciting how many days a student will be absent.
+
+
+# PART D
+
+```{r}
+logitmod1 = glm(StudentAbsenceDays~Discussion, family=binomial, data=StudentPerformance)
+logitmod2 = glm(StudentAbsenceDays~raisedhands, family=binomial, data=StudentPerformance)
+```
+
+```{r}
+anova(logitmod1, MultiStudentMod, test="Chisq")
+```
+
+Null Hypothesis: Adding the terms 'raisedhands' and 'ParentschoolSatisfaction' does not significantly improve the model (Beta = 0)
+
+Alternate Hypothesis: Adding the terms 'raisedhands' and 'ParentschoolSatisfaction' significantly improves the model (Beta /= 0)
+
+Based on the p-value of the above anova test (< 2.2e-16), we can conclude that 'raisedhands' and 'ParentschoolSatisfaction' significantly improve the model.
+
+```{r}
+anova(logitmod2, MultiStudentMod, test="Chisq")
+```
+
+Null Hypothesis: Adding the terms 'Discussion' and 'ParentschoolSatisfaction' does not significantly improve the model (Beta = 0)
+
+Alternate Hypothesis: Adding the terms 'Discussion' and 'ParentschoolSatisfaction' significantly improves the model (Beta /= 0)
+
+Based on the p-value of the above anova test (0.01573), we can conclude that 'raisedhands' and 'ParentschoolSatisfaction' significantly improve the model.
+
+
+# PART E
+
+```{r}
+StudentPerformance.1 = StudentPerformance[,c(1,10:13,15,16)] #reorder columns with response last
+head(StudentPerformance.1)
+
+StudentPerformance.1 = as.data.frame(StudentPerformance.1)
+```
+
+```{r}
+bestglm(StudentPerformance.1, family=binomial)
+
+StudentPerformance.1.bestglm = bestglm(StudentPerformance.1, family=binomial)
+StudentPerformance.1.bestglm$BestModels
+```
+
+```{r}
+emplogitplot1(StudentAbsenceDays~raisedhands, data=StudentPerformance, ngroups=10)
+
+emplogitplot2(StudentAbsenceDays~raisedhands+gender, ngroups=10, data=StudentPerformance)
+emplogitplot2(StudentAbsenceDays~VisITedResources+gender, ngroups=10, data=StudentPerformance)
+```
+
+```{r}
+StudentPerformance.2 = StudentPerformance.1
+StudentPerformance.2$PS.gender.int = StudentPerformance.2$raisedhands*(as.numeric(StudentPerformance$gender)-1)
+
+StudentPerformance.2 = as.data.frame(StudentPerformance.1)
+```
+
+```{r}
+bestglm(StudentPerformance.2, family=binomial)
+
+StudentPerformance.2.bestglm = bestglm(StudentPerformance.2, family=binomial)
+StudentPerformance.2.bestglm$BestModels
+```
+
+### BEST MODEL
+
+```{r}
+bestMod = glm(StudentAbsenceDays~raisedhands+gender+VisITedResources, data=StudentPerformance, family=binomial)
+summary(bestMod)
+```
+
